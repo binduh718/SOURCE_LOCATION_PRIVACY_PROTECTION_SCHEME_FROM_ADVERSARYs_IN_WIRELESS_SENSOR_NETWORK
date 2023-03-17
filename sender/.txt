@@ -1,0 +1,240 @@
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Container;
+import java.awt.Font;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.math.BigInteger;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.sql.Connection;
+import java.sql.Statement;
+
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+
+
+
+
+public class Attacker1 implements ActionListener
+{
+	public Font l = new Font("Times New Roman",Font.BOLD,18);
+	JFrame jf;
+	Container c;
+	JTextArea ja = new JTextArea("");
+	JScrollPane sc = new JScrollPane();
+	String fileName="";
+	String secretKey="";
+	String content="";
+	String ipAddress="";
+	String group1="";
+	String group2="";
+	String group3="";
+	
+	JButton jb = new JButton("Inject");
+	Attacker1()
+	{
+		jf = new JFrame("IDSManager");
+		c = jf.getContentPane();
+		c.setLayout(null);
+		jf.setSize(1250,700);
+		c.setBackground(new Color(200,120,234));
+		
+		sc.setBounds(350,150,350,220);
+		jb.setBounds(350,400,200,50);
+		ja.setColumns(30);
+		ja.setRows(10);
+		ja.setBackground(Color.BLUE);
+		ja.setForeground(new Color(100,255,255));
+		ja.setFont(l);
+		sc.setViewportView(ja);
+		
+		c.add(sc,BorderLayout.CENTER);
+		c.add(jb);
+		jb.addActionListener(this);
+		
+		
+		jf.show();
+		jf.addWindowListener(new WindowAdapter()
+		                      {
+			public void windowClosing(WindowEvent win)
+    		{
+    			System.exit(0);
+    		}
+		                      });
+		
+//		try
+//		{
+//			Socket s1 = new Socket("localhost",10001);
+//			DataOutputStream ios = new DataOutputStream(s1.getOutputStream());
+//			ios.writeUTF("cloud");
+//		}
+//		catch(Exception e)
+//		{
+//			e.printStackTrace();
+//		}
+		
+		
+		int[] ports = new int[] {3001};
+		
+		for(int i=0;i<1;i++)
+		{
+			Thread th = new Thread(new PortListener(ports[i]));
+			th.start();
+		}
+		
+		
+		
+	}
+	
+	public void actionPerformed(ActionEvent e)
+	{
+		if(e.getSource()==jb)
+		{
+			try {
+			
+				Socket sc = new Socket("localhost",2002);
+				DataOutputStream ds = new DataOutputStream(sc.getOutputStream());
+			String filename = JOptionPane.showInputDialog("Enter the file name");	
+			String 	injdata = ja.getText();
+			String	mac="";
+			String ip = "";
+			
+			InetAddress ia = InetAddress.getLocalHost();
+			 ip = ia.getHostAddress();
+			
+			
+			PrintStream pout=new PrintStream(new FileOutputStream("Attacker1\\"+filename+".txt"));
+			pout.write(injdata.getBytes());
+			pout.close();
+			
+			try
+			{
+				   MessageDigest md = MessageDigest.getInstance("SHA1");
+				   FileInputStream in1 = new FileInputStream("Attacker1\\"+filename+".txt");
+				   DigestInputStream dis2 = new DigestInputStream(in1, md);
+				   BufferedInputStream bd = new BufferedInputStream(dis2);
+				   
+				   while (true) {
+						int b2 = bd.read();
+						if (b2 == -1)
+							break;
+					}
+		 
+					BigInteger bi2 = new BigInteger(md.digest());
+					mac = bi2.toString(16);
+					System.out.println(mac);
+			}
+			catch(Exception e1)
+			{
+				e1.printStackTrace();
+			}
+			
+			ds.writeUTF(injdata);
+			ds.writeUTF(mac);
+			ds.writeUTF(ip);
+			System.out.println(mac);
+			
+				
+			} catch (UnknownHostException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			
+			
+			
+		}
+	}
+	
+	
+	public static void main(String[] args) {
+		new Attacker1();
+	}
+	
+	class PortListener implements Runnable
+	{
+		DataOutputStream dos = null;
+        DataInputStream in = null;
+		
+		ServerSocket server;
+		Socket connection;
+		int i;
+		String fileid;
+		Connection con;
+		Statement stmt;
+		int port;
+		
+		public PortListener(int port)
+		{
+			this.port=port;
+		}
+		
+		public void run()
+		{
+			if(this.port==3001)
+			{
+				try
+				{
+					server = new ServerSocket(3001);
+					
+					while(true)
+					{
+						connection = server.accept();
+						DataInputStream in = new DataInputStream(connection.getInputStream());
+					String file = in.readUTF();
+					String	ipAdd = in.readUTF();
+					String 	date1 = in.readUTF();
+					String msg1 = in.readUTF();
+					String	msg = in.readUTF();
+					
+						
+					System.out.println(file);
+						System.out.println(ipAdd);
+						System.out.println(msg);
+						System.out.println(date1);
+						
+						
+						
+					
+						Dbcon bd = new Dbcon();
+						con = bd.getConnection();
+						
+				      stmt = con.createStatement();
+						String sql = "insert into IDSManager values('"+file+"','"+ipAdd+"','"+date1+"','"+msg1+"')";
+						stmt.executeUpdate(sql);
+						JOptionPane.showMessageDialog(null,msg);
+					
+					}
+				}
+				catch(Exception e)
+				{
+					e.printStackTrace();
+				}
+				
+			}
+			
+			
+		
+		}
+	}
+
+}
